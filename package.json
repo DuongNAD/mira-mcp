@@ -1,0 +1,20 @@
+{
+  "name": "mira-mcp",
+  "version": "0.1.0",
+  "description": "Mira MCP: step-through Python code tracer with a self-contained HTML player and prediction gates",
+  "type": "module",
+  "bin": {
+    "mira": "./dist/mira.mjs"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "test": "node scripts/e2e.mjs"
+  },
+  "engines": {
+    "node": ">= 22.4"
+  },
+  "author": "DuongNAD (https://github.com/DuongNAD)",
+  "license": "MIT",
+  "repository": "https://github.com/DuongNAD/mira-mcp"
+}
