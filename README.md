@@ -1,5 +1,7 @@
 [Tiếng Việt](README.vi.md) | English
 
+<p align="center"><img src="docs/banner.jpg" alt="Mira MCP — Mira, the wonderful variable star, trailing its long tail" width="100%"></p>
+
 # Mira MCP
 
 *Named after Mira (omicron Ceti, "the wonderful"), the first known variable star: its brightness changes over time, like program state changing line by line.*

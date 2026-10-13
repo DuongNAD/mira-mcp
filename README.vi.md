@@ -1,5 +1,7 @@
 [English](README.md) | Tiếng Việt
 
+<p align="center"><img src="docs/banner.jpg" alt="Mira MCP — Mira, the wonderful variable star, trailing its long tail" width="100%"></p>
+
 # Mira MCP
 
 *Được đặt tên theo Mira (omicron Ceti, "kỳ diệu"), ngôi sao biến quang đầu tiên được biết: độ sáng đổi theo thời gian, giống trạng thái chương trình đổi theo từng dòng.*
