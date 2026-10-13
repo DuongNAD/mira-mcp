@@ -881,6 +881,97 @@ try {
           const nv = row("noviz", "phone-390x844");
           ok("phone 390: a player without a viz (trace table pane) fits", Boolean(nv) && nv.isPlayer && !nv.overflow, why(nv));
 
+          /* the control bar on phones (A* demo and a drill page, 390x844 and 360x740). Regression guard: the redesign put
+             `overflow: auto` on .app, which made .app the scrollport that the sticky bar sticks to; .app grows with its
+             content and never scrolls, so the bar sat at the end of the page, below the fold, and the step counter stuck
+             out of the bar. The first-paint check below fails on that CSS; the existing "gate is not hidden behind the
+             bar" check could not (the bar was far below the gate). */
+          const drillFile = join(layoutDir, "drill.html");
+          writeFileSync(drillFile, dHtml, "utf8");
+          const D = (id, w, h, extra = {}) => ({ page: "drill", file: drillFile, id, w, h, ...extra });
+          const barPlan = [];
+          for (const [w, h] of [[390, 844], [360, 740]]) {
+            for (const make of [A, D]) {
+              barPlan.push(make(`bar-${w}x${h}`, w, h));
+              barPlan.push(make(`gate-${w}x${h}`, w, h, { hash: "#stop-2" }));
+              barPlan.push(make(`answer-${w}x${h}`, w, h, { hash: "#stop-2", prelude: "reveal" }));
+            }
+          }
+          barPlan.push(A("bar-embed-390x844", 390, 844, { query: "?embed=1" }), A("bar-embed-360x640", 360, 640, { query: "?embed=1" }));
+          // runs in the page, so it must stay self-contained (it is serialised): where the bar (and an open gate) is at
+          // first paint, in the middle of the page and at its end, and whether the step counter fits
+          const barProbe = async () => {
+            const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const de = document.documentElement;
+            const rectOf = (el) => {
+              const r = el.getBoundingClientRect();
+              return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, width: r.width, height: r.height };
+            };
+            const bar = document.querySelector(".controls");
+            const gate = document.querySelector(".gate");
+            const stepNo = bar ? bar.querySelector(".stepno") : null;
+            const gateOpen = Boolean(gate) && getComputedStyle(gate).display !== "none";
+            const look = () => ({ y: window.scrollY, bar: bar ? rectOf(bar) : null, gate: gateOpen ? rectOf(gate) : null });
+            const out = { vw: de.clientWidth, vh: window.innerHeight, gateOpen, scrollHeight: de.scrollHeight };
+            out.maxY = Math.max(0, de.scrollHeight - window.innerHeight);
+            out.first = look();
+            window.scrollTo({ top: Math.round(out.maxY / 2), left: 0, behavior: "instant" });
+            await wait(120);
+            out.middle = look();
+            window.scrollTo({ top: out.maxY, left: 0, behavior: "instant" });
+            await wait(120);
+            out.end = look();
+            window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+            out.children = bar ? Array.from(bar.children).filter((c) => getComputedStyle(c).display !== "none").map((c) => ({ cls: String(c.className), ...rectOf(c) })) : [];
+            if (stepNo) {
+              const range = document.createRange();
+              range.selectNodeContents(stepNo);
+              out.stepNo = { text: stepNo.textContent, scrollWidth: stepNo.scrollWidth, clientWidth: stepNo.clientWidth, box: rectOf(stepNo), textRight: range.getBoundingClientRect().right };
+            }
+            return out;
+          };
+          const probes = await shots.probeCases(barPlan, barProbe, { browser });
+          ok("control bar probes ran on every page (A* and drill, plain, gate open and answered, embed)", probes.length === barPlan.length && probes.every((r) => r.value && r.value.first.bar), `${probes.length} of ${barPlan.length}`);
+          ok("real Chrome ran the control bar probes without a page error", probes.every((r) => r.errors.length === 0), probes.flatMap((r) => r.errors).slice(0, 2).join(" | "));
+          const inView = (b, p) => Boolean(b) && b.top >= -0.5 && b.bottom <= p.vh + 0.5 && b.left >= -0.5 && b.right <= p.vw + 0.5;
+          const span = (b) => (b ? `${Math.round(b.top)}..${Math.round(b.bottom)}` : "none");
+          for (const r of probes) {
+            const p = r.value;
+            if (!p) continue;
+            const tag = `${r.page} ${r.id}`;
+            if (r.id.startsWith("bar-")) {
+              ok(`${tag}: the control bar is fully inside the viewport on first paint`, inView(p.first.bar, p), `bar ${span(p.first.bar)} of ${p.vh}`);
+              ok(
+                `${tag}: the bar is still fully inside the viewport after scrolling to the middle and to the end of the page`,
+                p.maxY > 100 && p.middle.y > 50 && Math.abs(p.end.y - p.maxY) <= 1 && inView(p.middle.bar, p) && inView(p.end.bar, p),
+                `scrollY ${Math.round(p.middle.y)} and ${Math.round(p.end.y)} of ${Math.round(p.maxY)}, bar ${span(p.middle.bar)} and ${span(p.end.bar)} of ${p.vh}`,
+              );
+              ok(`${tag}: the control bar is compact (at most 130px, safe area included)`, p.first.bar.height >= 40 && p.first.bar.height <= 130, `${Math.round(p.first.bar.height)}px`);
+              ok(
+                `${tag}: no part of the bar (buttons, scrubber, step counter) sticks out at the viewport edge`,
+                p.children.length >= 3 && p.children.every((c) => c.left >= -0.5 && c.right <= p.vw + 0.5),
+                p.children.map((c) => `${c.cls} ${Math.round(c.left)}..${Math.round(c.right)}`).join(", "),
+              );
+              ok(
+                `${tag}: the step counter is not clipped (scrollWidth <= clientWidth, its box and text end inside the viewport width)`,
+                Boolean(p.stepNo) && p.stepNo.clientWidth > 0 && p.stepNo.scrollWidth <= p.stepNo.clientWidth && p.stepNo.box.left >= -0.5 && p.stepNo.box.right <= p.vw + 0.5 && p.stepNo.textRight <= p.vw + 0.5,
+                p.stepNo ? `"${p.stepNo.text}" scrollWidth ${p.stepNo.scrollWidth}/${p.stepNo.clientWidth}, box ${Math.round(p.stepNo.box.left)}..${Math.round(p.stepNo.box.right)}, text ends ${Math.round(p.stepNo.textRight)} of ${p.vw}` : "no .stepno",
+              );
+            } else {
+              ok(
+                `${tag}: a prediction gate is open and its bottom is above the bar's top`,
+                p.gateOpen && Boolean(p.first.gate) && p.first.gate.bottom <= p.first.bar.top + 0.5,
+                `gate ${span(p.first.gate)}, bar ${span(p.first.bar)}`,
+              );
+              ok(
+                `${tag}: the gate stays above the bar after scrolling to the middle of the page`,
+                p.gateOpen && Boolean(p.middle.gate) && p.maxY > 100 && p.middle.y > 50 && p.middle.gate.bottom <= p.middle.bar.top + 0.5,
+                `gate ${span(p.middle.gate)}, bar ${span(p.middle.bar)}, scrollY ${Math.round(p.middle.y)}`,
+              );
+              ok(`${tag}: the gate and the bar are both fully inside the viewport`, p.gateOpen && inView(p.first.gate, p) && inView(p.first.bar, p), `gate ${span(p.first.gate)}, bar ${span(p.first.bar)} of ${p.vh}`);
+            }
+          }
+
           const em1280 = await shots.inspectCase(
             A("embed-1280x650-stop3", 1280, 650, { query: "?embed=1", hash: "#stop-3" }),
             () => {

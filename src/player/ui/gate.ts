@@ -2,9 +2,11 @@ import type { StopCfg } from "../types.js";
 import { h, icon, isReducedMotion, richText } from "./dom.js";
 
 /**
- * On a phone the page scrolls and a sticky bar covers its bottom edge, while the gate sits in the viz panel near the
- * top of the page: when it opens (or grows with the answer) it may be out of sight. Bring it into view, clear of the
- * bar (the `scroll-margin` of .gate). In the side-by-side layout the page does not scroll and this does nothing.
+ * Brings the gate into view when the page itself scrolls and a sticky bar covers the bottom edge of the viewport.
+ * On a phone the gate is a sheet fixed above that bar (`.gate` in the phone media query, `bottom: var(--bar-h)`), so it
+ * is in view by construction (and never behind the bar) and this does nothing; it only acts for a layout that puts the
+ * gate in the page flow, where the base `scroll-margin` of .gate keeps it clear of the bar. In the side-by-side layout
+ * the page does not scroll and this returns at once.
  */
 function bringIntoView(el: HTMLElement): void {
   try {

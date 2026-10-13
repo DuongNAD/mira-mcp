@@ -25,8 +25,9 @@
  * Exit code: 0 nothing wrong, 1 some case has an issue (overflow, clipped caption, ...), 2 Chrome or pages unavailable.
  *
  * Library use (scripts/e2e.mjs): `findChrome()`, `launchChrome()`, `measureCases(cases, { browser })`,
- * `scanCaptions(cases, { browser })`, `inspectCase(case, fn)`. A case is `{ page, file, id, w, h, query?, hash?,
- * theme?, prelude? }`; a row of results has `scrollWidth`, `clientWidth`, `overflow`, `offenders`, `issues`, `parts`.
+ * `scanCaptions(cases, { browser })`, `probeCases(cases, fn, { browser })`, `inspectCase(case, fn)`. A case is
+ * `{ page, file, id, w, h, query?, hash?, theme?, prelude? }`; a row of results has `scrollWidth`, `clientWidth`,
+ * `overflow`, `offenders`, `issues`, `parts`.
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -410,6 +411,22 @@ function measureInPage() {
       }
     }
     if (h1 && h1.getBoundingClientRect().width < 90 && h1.textContent.length > 8) issues.push(`title crushed (${Math.round(h1.getBoundingClientRect().width)}px)`);
+    // The control bar must be fully inside the viewport on first paint (a sticky bar whose scrollport never scrolls sits at
+    // the end of the page, below the fold), and none of its children may stick out at the edge. The offender scan above
+    // cannot see the second case when an ancestor clips (overflow: hidden), but the learner just sees a cut-off counter.
+    const bar = document.querySelector(".controls");
+    if (bar && getComputedStyle(bar).display !== "none") {
+      const br = bar.getBoundingClientRect();
+      const vh = window.innerHeight;
+      if (br.top < -TOL || br.bottom > vh + TOL) issues.push(`control bar outside the viewport (${Math.round(br.top)}-${Math.round(br.bottom)} of ${vh})`);
+      for (const child of bar.children) {
+        if (getComputedStyle(child).display === "none") continue;
+        const cr = child.getBoundingClientRect();
+        if (cr.left < -TOL || cr.right > vw + TOL) issues.push(`control bar ${describe(child)} cut at the viewport edge (${Math.round(cr.left)}..${Math.round(cr.right)} of ${vw})`);
+      }
+      const stepNo = bar.querySelector(".stepno");
+      if (stepNo && stepNo.scrollWidth > stepNo.clientWidth + 1) issues.push("step counter text is cut");
+    }
     for (const s of svgs) if (s.getBoundingClientRect().right > vw + TOL) issues.push(`${describe(s)} wider than the viewport`);
     if (canvas && wrap && getComputedStyle(canvas).display !== "none" && canvas.getBoundingClientRect().width > wrap.clientWidth + 1) issues.push("grid canvas wider than its container");
     return {
@@ -615,6 +632,31 @@ export async function scanCaptions(cases, { browser: shared } = {}) {
       try {
         await openCase(page, c);
         out.push({ page: c.page ?? "page", id: c.id, ...(await page.evaluate(scanCaptionsInPage)) });
+      } finally {
+        await page.close();
+      }
+    }
+  } finally {
+    if (!shared) await browser.close();
+  }
+  return out;
+}
+
+/**
+ * Opens each case and returns `{ page, id, value, errors }` with what the self-contained function `fn` computes in the
+ * page (it may be async and may scroll: every case gets its own fresh page). Pass `browser` (from launchChrome) to reuse
+ * one Chrome for several calls; the caller then closes it.
+ */
+export async function probeCases(cases, fn, { browser: shared } = {}) {
+  const browser = shared ?? (await launchChrome());
+  const out = [];
+  try {
+    for (const c of cases) {
+      const page = await newPage(browser.cdp);
+      try {
+        await openCase(page, c);
+        const value = await page.evaluate(fn);
+        out.push({ page: c.page ?? "page", id: c.id, value, errors: [...page.errors] });
       } finally {
         await page.close();
       }

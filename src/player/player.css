@@ -85,6 +85,8 @@ body {
 }
 
 body {
+  /* only the body clips: its overflow propagates to the viewport, so the sticky control bar of the phone layout keeps
+     working (see the note on .app in the phone media query: no other ancestor of .controls may scroll or clip) */
   overflow-x: hidden;
   color: var(--text);
   font: 400 14px/1.5 "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -1545,16 +1547,22 @@ input {
   }
 }
 
-/* phone viewports (< 760px) */
+/* phone viewports (< 760px): the page itself scrolls, the control bar sticks to the bottom of the viewport and the
+   prediction gate docks on top of it */
 @media (max-width: 759px) {
   .app {
     --pad-x: 14px;
+    /* one height for the bar (its rows plus padding, safe area included) and for the gate docked on it (.gate bottom) */
+    --bar-h: calc(88px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
     height: auto;
     min-height: 100vh;
     min-height: 100dvh;
-    overflow-y: auto;
+    /* Must stay visible: .controls is position: sticky and sticks to its nearest scrolling ancestor. A scroll or
+       clip container here (overflow auto, hidden, scroll) grows with its content and never scrolls, so the bar would
+       sit at the end of the page, below the fold. Only the body clips (see the note on body). */
+    overflow: visible;
     padding: 12px var(--pad-x) 0;
     gap: 12px;
   }
@@ -1642,22 +1650,54 @@ input {
     min-height: 96px;
     flex: none;
   }
+  /* a sheet pinned to the viewport and docked on the control bar: in view without any scrolling, never behind the bar
+     (so no scroll-margin either: the base one, for a gate in the page flow, would make scrollIntoView move the page) */
   .gate {
     position: fixed;
-    bottom: 56px;
+    bottom: var(--bar-h);
     left: 0;
     right: 0;
     max-height: 60%;
     z-index: 30;
+    scroll-margin: 0;
   }
-  .controls {
+  /* Two rows: the scrubber across the full width, then the buttons with the step counter at the right end (in one row
+     the counter or the scrubber has no room at 360px). The height is pinned to --bar-h, which the gate uses too.
+     .no-stops is listed because its rule in the base layout is more specific than a lone .controls. */
+  .controls,
+  .controls.no-stops {
     position: sticky;
     bottom: 0;
     z-index: 20;
+    height: var(--bar-h);
+    min-height: var(--bar-h);
+    max-height: var(--bar-h);
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "scrub scrub"
+      "btns step";
+    align-content: center;
+    gap: 2px 12px;
     margin: auto calc(var(--pad-x) * -1) 0;
-    padding: 8px var(--pad-x) calc(8px + env(safe-area-inset-bottom, 0px));
+    padding: 6px var(--pad-x) calc(6px + env(safe-area-inset-bottom, 0px));
     border-radius: 16px 16px 0 0;
     background: var(--panel);
+  }
+  .scrub {
+    grid-area: scrub;
+  }
+  .scrub-track,
+  .scrub-range {
+    height: 28px;
+  }
+  .ctl-buttons {
+    grid-area: btns;
+  }
+  /* the box fills its track (the text is right-aligned by the base rule), so text wider than the track would overflow
+     the box and show up in scrollWidth instead of silently pushing into the buttons or out of the page */
+  .stepno {
+    grid-area: step;
+    min-width: 0;
   }
 }
 
