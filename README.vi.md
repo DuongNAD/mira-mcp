@@ -12,17 +12,27 @@ Mira là phòng dò code trong hệ sinh thái MCP của người học. Mira ch
 
 ## Hệ sinh thái
 
-Toàn bộ dự án phát triển bởi DuongNAD:
+Mọi dự án của DuongNAD:
 
-| Dự án | Vai trò | Kho lưu trữ (Repository) |
+| Dự án | Vai trò | Kho mã |
 | :--- | :--- | :--- |
-| **Polaris** | Kiến trúc sư lộ trình; nhận các dự đoán sai của Mira vào Sổ lỗi | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
-| **Aurora Slides** | Động cơ bài giảng; nhúng player Mira vào slide `trace` | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
-| **SmartDrive-OS** | Quản trị SSD và tìm kiếm tài liệu; lập chỉ mục những gì Mira ghi | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
-| **Constellation** | Đăng ký MCP và hợp đồng hệ sinh thái | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
-| **Vega** | Ghi nhớ giãn cách thích ứng (FSRS); nhận thẻ ôn tập qua hộp thư | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |
-| **Orion** | Phòng thực hành và thang gợi ý; Mira dò tệp entry của bài lab | [orion-mcp](https://github.com/DuongNAD/orion-mcp) |
-| **Mira** | Vết chạy thật, điểm dừng dự đoán, nhật ký tiến độ | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
+| **Polaris** | Kiến trúc khóa học: nguồn, dữ kiện có vị trí trích, lộ trình, lịch học, Sổ lỗi | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
+| **Aurora Slides** | Bài học kiểu keynote: trắc nghiệm, slide dự đoán và dò code, sự kiện tiến độ | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
+| **Vega** | Bộ nhớ FSRS và hàng đợi ôn tập duy nhất (hộp thư thẻ) | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |
+| **Orion** | Lab thực hành chấm bằng test thật, bậc thang gợi ý, bậc khởi động PRIMM | [orion-mcp](https://github.com/DuongNAD/orion-mcp) |
+| **Mira** | Dò code: trace Python thật, trình phát từng dòng có điểm dừng dự đoán | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
+| **Rigel** | Gia sư bám tài liệu: trả lời từ tài liệu bài học, có trích dẫn [ref] | [rigel-mcp](https://github.com/DuongNAD/rigel-mcp) |
+| **Sirius** | Vòng thực thi: hạn chót, phân loại việc, hôm nay học gì, bấm giờ, tổng kết tuần | [sirius-mcp](https://github.com/DuongNAD/sirius-mcp) |
+| **Constellation** | Đăng ký MCP, kiểm tra sức khỏe, hợp đồng dữ liệu chung | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
+| **SmartDrive-OS** | Quản trị SSD, chỉ mục và tìm kiếm tài liệu học | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
+
+### Kết nối
+
+- Aurora: player nhúng vào slide `trace` (`mira-embed.v1`).
+- Orion: `lab` dò chính tệp entry của bài lab của người học.
+- Vega và Polaris: `mira_progress { to_vega }` đưa các điểm dừng chưa đúng vào hộp thư thẻ của Vega; các mục Sổ lỗi dành cho Polaris.
+- Rigel: kết quả là code từ `search_material` in sẵn đường dẫn tệp để dò bằng `mira_record`.
+- Sirius: các dự đoán của Mira được tính là bằng chứng học tập.
 
 ---
 

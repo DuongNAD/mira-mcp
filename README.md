@@ -16,13 +16,23 @@ All projects by DuongNAD:
 
 | Project | Role | Repository |
 | :--- | :--- | :--- |
-| **Polaris** | Course architect & syllabus engine; receives Mira's missed predictions in its error log | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
-| **Aurora Slides** | Lessons & presentation engine; embeds Mira players in a `trace` slide | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
-| **SmartDrive-OS** | SSD governance & learning search; indexes what Mira writes | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
-| **Constellation** | MCP registration & ecosystem contracts | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
-| **Vega** | Adaptive spaced repetition (FSRS); receives review cards in its inbox | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |
-| **Orion** | Practice labs & tutoring ladder; Mira traces a lab's entry file | [orion-mcp](https://github.com/DuongNAD/orion-mcp) |
-| **Mira** | Real code traces, prediction gates, progress log | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
+| **Polaris** | Course architect: sources, facts with locators, roadmap, schedule, error log | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
+| **Aurora Slides** | Keynote-style lessons: quizzes, predict and trace slides, progress events | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
+| **Vega** | FSRS memory engine and the single review queue (card inbox) | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |
+| **Orion** | Practice labs with real tests, tutoring ladder and PRIMM warm-up | [orion-mcp](https://github.com/DuongNAD/orion-mcp) |
+| **Mira** | Code-tracing lab: real Python traces, line-by-line players with prediction gates | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
+| **Rigel** | Grounded tutor: answers from the learner's lesson materials with [ref] citations | [rigel-mcp](https://github.com/DuongNAD/rigel-mcp) |
+| **Sirius** | Execution loop: deadlines, triage, today router, session timer, weekly review | [sirius-mcp](https://github.com/DuongNAD/sirius-mcp) |
+| **Constellation** | MCP registration, health checks and shared contracts | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
+| **SmartDrive-OS** | SSD governance, index and learning search | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
+
+### Connections
+
+- Aurora: players embed in `trace` slides (`mira-embed.v1`).
+- Orion: `lab` traces the learner's own lab entry file.
+- Vega and Polaris: `mira_progress { to_vega }` sends missed stops to the Vega inbox; error-log entries for Polaris.
+- Rigel: code hits from `search_material` print the file path to trace with `mira_record`.
+- Sirius: Mira predictions count as study evidence.
 
 ---
 

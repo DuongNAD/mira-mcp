@@ -81,6 +81,7 @@ Rules:
 - Stops ask before revealing; learner-facing text is Vietnamese with correct diacritics and no emoji.
 - Players work offline from file:// (no CDN); Python runs with -B -X utf8, time-boxed, killed with its process tree on timeout.
 - No recursive scans of D:; no npm install on D:.
+- Code found by Rigel's search_material prints its file path; trace it with mira_record.
 
 Done when:
 The player builds without errors from a real trace, the learner's predictions are logged in the aurora-progress-event.v1 format, and misses are exported to the error log and Vega.`;

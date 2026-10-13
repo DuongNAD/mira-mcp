@@ -14,12 +14,15 @@ Nghiên cứu về trực quan hoá thuật toán (Hundhausen, Douglas và Stask
 ## Hệ sinh thái
 | Dự án | Vai trò |
 |---|---|
-| Polaris | Lộ trình, Sổ lỗi (nhận lỗi dự đoán từ Mira) |
-| Aurora Slides | Bài giảng; nhúng player Mira qua slide trace (giao thức mira-embed.v1) |
-| Orion | Phòng thực hành; Mira dò chính tệp entry của bài lab (tham số lab) |
-| Vega | Thẻ nhớ FSRS; Mira bỏ thẻ vào hộp thư .vega/inbox/ |
-| SmartDrive-OS | Lập chỉ mục tệp Mira vừa ghi (hook post-write) |
-| Mira | Dò code thật, điểm dừng dự đoán, nhật ký tiến độ |
+| Polaris | Kiến trúc khóa học: nguồn, dữ kiện có vị trí trích, lộ trình, lịch học, Sổ lỗi |
+| Aurora Slides | Bài học kiểu keynote: trắc nghiệm, slide dự đoán và dò code, sự kiện tiến độ |
+| Vega | Bộ nhớ FSRS và hàng đợi ôn tập duy nhất (hộp thư thẻ) |
+| Orion | Lab thực hành chấm bằng test thật, bậc thang gợi ý, bậc khởi động PRIMM |
+| Mira | Dò code: trace Python thật, trình phát từng dòng có điểm dừng dự đoán |
+| Rigel | Gia sư bám tài liệu: trả lời từ tài liệu bài học, có trích dẫn [ref] |
+| Sirius | Vòng thực thi: hạn chót, phân loại việc, hôm nay học gì, bấm giờ, tổng kết tuần |
+| Constellation | Đăng ký MCP, kiểm tra sức khỏe, hợp đồng dữ liệu chung |
+| SmartDrive-OS | Quản trị SSD, chỉ mục và tìm kiếm tài liệu học |
 
 ## Quy trình
 record -> đọc tóm tắt -> viết spec (1-3 viz, counters, 3-8 stops) -> mira_check -> mira_build -> mở player (mira_preview hoặc mở tệp) -> người học đoán ở từng điểm dừng -> mira_progress -> chuyển các điểm sai sang polaris_errorlog_add và hộp thư Vega.
