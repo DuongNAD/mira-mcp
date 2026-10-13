@@ -56,7 +56,7 @@ export function createSeq(cfg: SeqCfg): VizInstance {
   let lastWidth = 0;
   const bodyWidth = (): number => (typeof body.getBoundingClientRect === "function" ? Math.round(body.getBoundingClientRect().width) : 0);
 
-  const update = (m: Model, k: number): void => {
+  const update = (m: Model, k: number, _animate?: boolean): void => {
     last = { m, k };
     const v = m.get(k, cfg.var);
     const items = arrayItems(v);
@@ -108,12 +108,17 @@ export function createSeq(cfg: SeqCfg): VizInstance {
     if (items.length > MAX_TREE) body.appendChild(h("div", { class: "sv-more", text: `Cây chỉ vẽ ${MAX_TREE} nút đầu trong ${items.length}` }));
   };
 
+  let lastEmpty = true;
   return {
     el,
-    update,
+    update: (...args) => {
+      update(...args);
+      lastEmpty = note.style.display !== "none" || body.querySelector(".seq-empty") !== null;
+    },
     // the heap tree is laid out for the container width: draw it again when that changes (rotation, window resize)
     resize: () => {
       if (cfg.kind === "heap" && last && Math.abs(bodyWidth() - lastWidth) >= 4) update(last.m, last.k);
     },
+    isEmpty: () => lastEmpty,
   };
 }

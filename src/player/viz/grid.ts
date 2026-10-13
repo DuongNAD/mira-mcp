@@ -89,8 +89,6 @@ export function createGrid(cfg: GridCfg): VizInstance {
     if (canvas.width !== pw || canvas.height !== ph) {
       canvas.width = pw;
       canvas.height = ph;
-      canvas.style.width = `${cssW}px`;
-      canvas.style.height = `${cssH}px`;
     }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -258,6 +256,11 @@ export function createGrid(cfg: GridCfg): VizInstance {
     prevKinds = next;
     redraw(animate);
   };
+
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(() => redraw(false));
+    ro.observe(wrap);
+  }
 
   return { el, update, resize: () => redraw(false) };
 }

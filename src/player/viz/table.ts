@@ -44,12 +44,15 @@ export function createTable(cfg: TableCfg): VizInstance {
         extra = Math.max(0, items.length - MAX_ROWS);
       }
     }
+    let lastEmpty = true;
     if (rows.length === 0) {
       wrap.style.display = "none";
       note.style.display = "";
-      setText(note, v === undefined ? `Chưa có giá trị cho ${cfg.var}` : "Bảng trống");
+      setText(note, `${cfg.title ?? cfg.var}: (trống)`);
+      lastEmpty = true;
       return;
     }
+    lastEmpty = false;
     wrap.style.display = "";
     note.style.display = "none";
     const sig = `${header.join("|")}#${rows.length}`;
@@ -85,5 +88,6 @@ export function createTable(cfg: TableCfg): VizInstance {
     }
   };
 
-  return { el, update, resize: () => undefined };
+  let lastEmpty = true;
+  return { el, update: (...args) => { update(...args); lastEmpty = note.style.display !== "none"; }, resize: () => undefined, isEmpty: () => lastEmpty };
 }

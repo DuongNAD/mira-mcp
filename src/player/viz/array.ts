@@ -104,5 +104,14 @@ export function createArray(cfg: ArrayCfg): VizInstance {
     prev = items;
   };
 
-  return { el, update, resize: () => undefined };
+  let lastEmpty = true;
+  return {
+    el,
+    update: (...args) => {
+      update(...args);
+      lastEmpty = empty.style.display !== "none";
+    },
+    resize: () => undefined,
+    isEmpty: () => lastEmpty,
+  };
 }

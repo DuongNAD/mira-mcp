@@ -14,27 +14,55 @@ export class CodePane {
   private nextRow = -1;
   private stackText = "";
 
-  constructor(data: PlayerData) {
-    this.stackEl = h("span", { class: "win-stack" });
+  constructor(data: PlayerData, captionEl: HTMLElement) {
+    this.stackEl = h("span", { class: "win-stack mono" });
     const bar = h(
       "div",
       { class: "win-bar" },
-      h("span", { class: "dots", "aria-hidden": "true" }, h("i"), h("i"), h("i")),
-      h("span", { class: "win-title", text: data.meta.file }),
+      h("span", { class: "win-title mono", text: data.meta.file }),
       this.stackEl,
     );
-    this.scroller = h("div", { class: "code-scroll", tabindex: "-1" });
-    data.source.forEach((_line, i) => {
-      const row = h("div", { class: "ln", "data-n": String(i + 1) }, h("span", { class: "no", text: String(i + 1) }), h("span", { class: "tx" }));
-      (row.lastChild as HTMLElement).innerHTML = data.hl[i] ?? "";
+    this.scroller = h("div", { class: "code-scroll mono", tabindex: "-1" });
+    data.source.forEach((line, i) => {
+      const match = line.match(/^[ \t]*/);
+      const raw = match ? match[0].replace(/\t/g, "    ") : "";
+      const indent = raw.length + 4;
+      const tx = h("span", {
+        class: "tx mono",
+        style: {
+          "padding-left": `${indent}ch`,
+          "text-indent": `-${indent}ch`,
+        },
+      });
+      tx.innerHTML = data.hl[i] ?? "";
+      const row = h(
+        "div",
+        { class: "ln", "data-n": String(i + 1) },
+        h("span", { class: "no mono", text: String(i + 1) }),
+        tx,
+      );
       this.rows.push(row);
       this.scroller.appendChild(row);
     });
-    this.el = h("section", { class: "panel code", "aria-label": "Mã nguồn" }, bar, this.scroller);
+    this.el = h("section", { class: "panel code", "aria-label": "Mã nguồn" }, bar, this.scroller, captionEl);
+
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => {
+        if (this.scroller.clientHeight > 0) {
+          this.revealActive(false);
+        }
+      });
+      ro.observe(this.scroller);
+    }
+  }
+
+  revealActive(smooth = false, gateEl?: HTMLElement): void {
+    const focus = this.nextRow >= 0 ? this.nextRow : this.doneRow;
+    if (focus >= 0) this.reveal(focus, smooth, gateEl);
   }
 
   /** `done` = line that just ran, `next` = line about to run (1-based, 0 = none). */
-  update(done: number, next: number, stack: string[], smooth: boolean): void {
+  update(done: number, next: number, stack: string[], smooth: boolean, gateEl?: HTMLElement): void {
     const d = done > 0 ? done - 1 : -1;
     const n = next > 0 ? next - 1 : -1;
     if (d !== this.doneRow) {
@@ -53,23 +81,40 @@ export class CodePane {
       setText(this.stackEl, text);
     }
     const focus = n >= 0 ? n : d;
-    if (focus >= 0) this.reveal(focus, smooth);
+    if (focus >= 0) this.reveal(focus, smooth, gateEl);
   }
 
-  /** Scrolls only the code pane (never the page) so that the row stays comfortably visible. */
-  private reveal(index: number, smooth: boolean): void {
+  /** Scrolls only the code pane (never the page) so that the row stays comfortably visible and centered. */
+  reveal(index: number, smooth: boolean, gateEl?: HTMLElement): void {
     const row = this.rows[index];
     if (!row) return;
     const sc = this.scroller;
     const view = sc.clientHeight;
-    if (!view) return;
+    if (!view) {
+      requestAnimationFrame(() => this.reveal(index, false, gateEl));
+      return;
+    }
     const top = row.offsetTop;
     const hh = row.offsetHeight;
-    const margin = Math.min(48, view * 0.2);
-    if (top >= sc.scrollTop + margin && top + hh <= sc.scrollTop + view - margin) return;
-    const target = Math.max(0, Math.min(sc.scrollHeight - view, top - (view - hh) / 2));
-    if (typeof sc.scrollTo === "function") sc.scrollTo({ top: target, behavior: smooth && !isReducedMotion() ? "smooth" : "auto" });
-    else sc.scrollTop = target;
+
+    let visibleHeight = view;
+    if (gateEl && gateEl.style.display !== "none") {
+      try {
+        const scRect = sc.getBoundingClientRect();
+        const gateRect = gateEl.getBoundingClientRect();
+        if (gateRect.top > scRect.top && gateRect.top < scRect.bottom) {
+          visibleHeight = Math.max(60, gateRect.top - scRect.top);
+        }
+      } catch {
+        // fallback
+      }
+    }
+    const target = Math.max(0, Math.min(sc.scrollHeight - view, top - (visibleHeight - hh) / 2));
+    if (typeof sc.scrollTo === "function") {
+      sc.scrollTo({ top: target, behavior: smooth && !isReducedMotion() ? "smooth" : "auto" });
+    } else {
+      sc.scrollTop = target;
+    }
   }
 }
 
@@ -100,7 +145,7 @@ export class VarsPane {
   private names: string[] = [];
 
   constructor() {
-    this.frameLabel = h("span", { class: "vars-frame" });
+    this.frameLabel = h("span", { class: "vars-frame mono" });
     this.banner = h("div", { class: "banner" });
     this.banner.style.display = "none";
     this.body = h("div", { class: "vars-body", role: "list" });
@@ -151,7 +196,7 @@ export class VarsPane {
       const v = st.vars[name] as Val;
       if (row.ref !== v || row.text === "") {
         row.ref = v;
-        const text = pyRepr(v, 90, 12);
+        const text = pyRepr(v, 300, 20);
         if (text !== row.text) {
           row.text = text;
           row.val.textContent = text;
@@ -195,6 +240,7 @@ export class StdoutPane {
   constructor(private readonly full: string) {
     this.pre = h("pre", { class: "out-pre mono" });
     this.el = h("section", { class: "panel out", "aria-label": "Đầu ra" }, h("div", { class: "panel-head" }, h("span", { class: "panel-title", text: "Đầu ra" })), this.pre);
+    this.el.style.display = "none";
   }
 
   update(count: number): void {
@@ -204,7 +250,12 @@ export class StdoutPane {
     const text = this.full.slice(0, count);
     this.pre.textContent = text;
     this.pre.classList.toggle("empty", text === "");
-    if (text === "") this.pre.setAttribute("data-empty", "(chưa có đầu ra)");
+    if (text === "") {
+      this.pre.setAttribute("data-empty", "(chưa có đầu ra)");
+      this.el.style.display = "none";
+    } else {
+      this.el.style.display = "";
+    }
     if (grew) this.pre.scrollTop = this.pre.scrollHeight;
   }
 }
@@ -216,13 +267,15 @@ export class Counters {
   private readonly items: Array<{ cfg: CounterCfg; val: HTMLElement; text: string }> = [];
 
   constructor(cfgs: CounterCfg[]) {
-    this.el = h("section", { class: "counters", "aria-label": "Bộ đếm" });
-    for (const cfg of cfgs) {
-      const val = h("span", { class: "ctr-val", text: "-" });
-      this.el.appendChild(h("div", { class: "ctr" }, h("span", { class: "ctr-label", text: cfg.label }), val));
+    this.el = h("div", { class: "counters", "aria-label": "Bộ đếm" });
+    const limited = cfgs.slice(0, 4);
+    for (const cfg of limited) {
+      const val = h("span", { class: "ctr-val mono", text: "-" });
+      const label = h("span", { class: "ctr-label", text: cfg.label });
+      this.el.appendChild(h("div", { class: "ctr" }, val, label));
       this.items.push({ cfg, val, text: "" });
     }
-    if (cfgs.length === 0) this.el.style.display = "none";
+    if (limited.length === 0) this.el.style.display = "none";
   }
 
   update(m: Model, k: number, animate: boolean): void {

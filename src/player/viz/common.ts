@@ -5,6 +5,7 @@ export interface VizInstance {
   el: HTMLElement;
   update(m: Model, k: number, animate: boolean): void;
   resize(): void;
+  isEmpty?(): boolean;
 }
 
 /**

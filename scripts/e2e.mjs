@@ -692,7 +692,7 @@ try {
     ok("build with no viz is allowed (warns)", nb.ok && nb.warnings.some((w) => w.includes("chưa có viz")));
     const p = bootPlayer(readFileSync(nb.indexPath, "utf8"));
     ok("no-viz player boots with a trace table", p.errors.length === 0 && p.byClass("trace").length === 1 && p.byClass("trace-tbl").length === 1);
-    ok("a player without stops marks the controls no-stops (grid columns) and has no stop button", p.byClass("controls")[0].classList.contains("no-stops") && p.byClass("stop-btn")[0].style.display === "none" && p.byClass("tick").length === 0);
+    ok("a player without stops marks the controls no-stops (grid columns) and has no stop button", p.byClass("controls")[0].classList.contains("no-stops") && p.byClass("stop-btn").length === 0 && p.byClass("tick").length === 0);
     ok("a player without counters marks the app no-counters", p.byClass("app")[0].classList.contains("no-counters") && p.byClass("counters").length === 0);
     const vizText = () => p.byClass("viz-body")[0].textContent;
     const rowsNow = () => p.byClass("trace-tbl")[0].querySelector("tbody").children.length;
@@ -710,10 +710,9 @@ try {
     const p = bootPlayer(demoHtml.astar, { protocol: "http:" });
     ok("A* demo: boots, grid canvas and counters present", p.errors.length === 0 && p.byClass("grid-canvas").length === 1 && p.byClass("ctr").length === 3);
     const next = p.byAria("Bước kế tiếp");
-    const nextStop = p.all((e) => e.tagName === "BUTTON" && e.textContent.includes("Điểm dừng tiếp theo"))[0];
-    p.click(nextStop);
+    p.key("n");
     const gate = p.byClass("gate")[0];
-    ok("A* demo: next-stop button opens the first prediction gate", p.visible(gate) && p.byClass("gate-q")[0].textContent.includes("cell"), p.byClass("gate-q")[0]?.textContent.slice(0, 60));
+    ok("A* demo: N key opens the first prediction gate", p.visible(gate) && p.byClass("gate-q")[0].textContent.includes("cell"), p.byClass("gate-q")[0]?.textContent.slice(0, 60));
     const stepBefore = p.byClass("stepno")[0].textContent;
     p.click(next);
     ok("gate blocks stepping until answered or skipped", p.byClass("stepno")[0].textContent === stepBefore);
@@ -729,7 +728,7 @@ try {
     p.click(p.all((e) => e.tagName === "BUTTON" && e.textContent === "Tiếp tục")[0]);
     ok("continuing closes the gate", !p.visible(gate));
     // answer the second stop correctly using the model
-    p.click(nextStop);
+    p.key("n");
     const d = JSON.parse(/<script type="application\/json" id="mira-data">([\s\S]*?)<\/script>/.exec(demoHtml.astar)[1]);
     const m = new lib.Model(d);
     const stop2 = d.stops[1];
@@ -776,13 +775,12 @@ try {
     const e = bootPlayer(readFileSync(indexPath, "utf8"), { embed: true, protocol: "http:" });
     ok("embed: boots and posts a ready message to the parent", e.errors.length === 0 && e.messages[0]?.m.kind === "ready" && e.messages[0].m.source === "mira" && e.messages[0].m.v === 1 && e.messages[0].m.title === "Tổng 1 đến n" && e.messages[0].m.steps === 14 && e.messages[0].m.stops === 4, JSON.stringify(e.messages[0]?.m));
     ok("embed: app is flagged data-embed=1 and the export button is hidden", e.byClass("app")[0].getAttribute("data-embed") === "1" && !e.all((x) => x.tagName === "BUTTON" && x.textContent.includes("Xuất tiến độ")).length);
-    const nextStopBtn = () => e.all((x) => x.tagName === "BUTTON" && x.textContent.includes("Điểm dừng tiếp theo"))[0];
     const goOn = () => e.click(e.all((x) => x.tagName === "BUTTON" && x.textContent === "Tiếp tục")[0]);
-    e.click(nextStopBtn());
+    e.key("n");
     ok("embed: first stop of the spec is the choice question", e.byClass("choice").length === 3);
     e.click(e.byClass("choice")[1]);
     goOn();
-    e.click(nextStopBtn());
+    e.key("n");
     e.byClass("gate-input")[0].value = "3";
     e.byClass("gate-input")[0].dispatchEvent(new FakeEvent("keydown", { key: "Enter" }));
     const evMsgs = e.messages.filter((x) => x.m.kind === "event");
@@ -805,13 +803,13 @@ try {
     ok("embed: Escape posts a blur message to the parent", e.messages.some((x) => x.m.kind === "blur" && x.m.source === "mira" && x.m.v === 1));
     // choice gate: the first stop of the spec
     const c = bootPlayer(readFileSync(indexPath, "utf8"), { embed: true });
-    c.click(c.all((x) => x.tagName === "BUTTON" && x.textContent.includes("Điểm dừng tiếp theo"))[0]);
+    c.key("n");
     const choices = c.byClass("choice");
     ok("choice stop renders its options", choices.length === 3 && choices[1].textContent.includes("5"));
     c.click(choices[1]);
     ok("choice stop: picking the right option is graded right", c.byClass("gate-verdict")[0]?.classList.contains("right"));
     c.click(c.all((x) => x.tagName === "BUTTON" && x.textContent === "Tiếp tục")[0]);
-    c.click(c.all((x) => x.tagName === "BUTTON" && x.textContent.includes("Điểm dừng tiếp theo"))[0]);
+    c.key("n");
     c.byClass("gate-input")[0].value = "99";
     c.byClass("gate-input")[0].dispatchEvent(new FakeEvent("keydown", { key: "Enter" }));
     ok("value stop: a wrong answer is graded different", c.byClass("gate-verdict")[0]?.classList.contains("diff"));
@@ -882,6 +880,108 @@ try {
           ok("phone 390 with a prediction gate open: the gate is not hidden behind the control bar", Boolean(gt) && Boolean(gt.parts.gate) && gt.parts.gate.bottom <= gt.parts.controls.top + 1, `gate bottom ${gt?.parts.gate?.bottom}, bar top ${gt?.parts.controls.top}`);
           const nv = row("noviz", "phone-390x844");
           ok("phone 390: a player without a viz (trace table pane) fits", Boolean(nv) && nv.isPlayer && !nv.overflow, why(nv));
+
+          const em1280 = await shots.inspectCase(
+            A("embed-1280x650-stop3", 1280, 650, { query: "?embed=1", hash: "#stop-3" }),
+            () => {
+              const codeEl = document.querySelector(".ln .tx");
+              const codeFs = codeEl ? parseFloat(getComputedStyle(codeEl).fontSize) : 0;
+              const sc = document.querySelector(".code-scroll");
+              const noHOverflow = sc ? sc.scrollWidth <= sc.clientWidth + 1 : false;
+              const active = document.querySelector(".ln.next");
+              let activeInView = false;
+              if (sc && active) {
+                const scRect = sc.getBoundingClientRect();
+                const actRect = active.getBoundingClientRect();
+                const gate = document.querySelector(".gate");
+                const gateTop = gate && getComputedStyle(gate).display !== "none" ? gate.getBoundingClientRect().top : scRect.bottom;
+                const visibleBottom = Math.min(scRect.bottom, gateTop);
+                activeInView = actRect.top >= scRect.top - 1 && actRect.bottom <= visibleBottom + 1;
+              }
+              const input = document.querySelector(".gate-input");
+              const inputHeight = input ? input.getBoundingClientRect().height : 0;
+              const hasSpeed = Boolean(document.querySelector(".speed"));
+              const hasStopBtn = Boolean(document.querySelector(".stop-btn"));
+              const hasFirstLast = Array.from(document.querySelectorAll("button")).some((b) => {
+                const aria = (b.getAttribute("aria-label") ?? "").toLowerCase();
+                return aria.includes("đầu tiên") || aria.includes("cuối cùng");
+              });
+              const topEl = document.querySelector(".top");
+              const ctrEl = document.querySelector(".counters");
+              const countersInHeader = Boolean(topEl && ctrEl && topEl.contains(ctrEl));
+              const vvEl = document.querySelector(".vr .vv");
+              const vvStyle = vvEl ? getComputedStyle(vvEl) : null;
+              const codeStyle = codeEl ? getComputedStyle(codeEl) : null;
+              const wrapOk = Boolean(
+                vvStyle && codeStyle &&
+                vvStyle.overflowWrap !== "anywhere" && vvStyle.wordBreak === "normal" &&
+                codeStyle.overflowWrap !== "anywhere" && codeStyle.wordBreak === "normal"
+              );
+              const varsEl = document.querySelector(".panel.vars");
+              const sideEl = document.querySelector(".side");
+              const varsRatio = varsEl && sideEl ? varsEl.getBoundingClientRect().height / sideEl.getBoundingClientRect().height : 0;
+              return {
+                codeFs,
+                noHOverflow,
+                activeInView,
+                inputHeight,
+                hasSpeed,
+                hasStopBtn,
+                hasFirstLast,
+                countersInHeader,
+                wrapOk,
+                varsRatio,
+              };
+            },
+          );
+          ok("embed 1280x650: computed font-size of code lines >= 15px", Boolean(em1280) && em1280.codeFs >= 15, `${em1280?.codeFs}px`);
+          ok("embed 1280x650: .code-scroll has no horizontal overflow", Boolean(em1280) && em1280.noHOverflow);
+          ok("embed 1280x650: active line is inside scroller's visible area on load at #stop-3", Boolean(em1280) && em1280.activeInView);
+          ok("embed 1280x650: gate input is >= 40px tall", Boolean(em1280) && em1280.inputHeight >= 40, `${em1280?.inputHeight}px`);
+          ok("embed 1280x650: .speed, .stop-btn and first/last buttons no longer exist", Boolean(em1280) && !em1280.hasSpeed && !em1280.hasStopBtn && !em1280.hasFirstLast);
+          ok("embed 1280x650: counters are inside the header row", Boolean(em1280) && em1280.countersInHeader);
+          ok("embed 1280x650: wrapping does not break inside words (.vv and .tx overflow-wrap != anywhere, word-break == normal)", Boolean(em1280) && em1280.wrapOk);
+          ok("embed 1280x650: variables panel is >= 40% of state column height when viz is non-empty", Boolean(em1280) && em1280.varsRatio >= 0.40, `${((em1280?.varsRatio ?? 0) * 100).toFixed(1)}%`);
+
+          let regexFile = [
+            join(tmpdir(), "mira-redesign", "regex-parse", "index.html"),
+            "C:/Users/Admin/AppData/Local/Temp/mira-redesign/regex-parse/index.html",
+          ].find((p) => existsSync(p));
+          if (!regexFile) {
+            const specPath = "C:/Users/Admin/AppData/Local/Temp/claude/D--03-Development-Projects-Slide-Projects/5baec302-83a7-496e-a308-d1d8d598e23f/scratchpad/mira-specs/regex-parse.spec.json";
+            if (existsSync(specPath)) {
+              const spec = JSON.parse(readFileSync(specPath, "utf8"));
+              const res = await lib.buildPlayer(spec);
+              regexFile = res?.indexPath;
+            }
+          }
+          if (regexFile) {
+            const rp1280 = await shots.inspectCase(
+              { page: "regex-parse", file: regexFile, id: "embed-1280x650-step5", w: 1280, h: 650, query: "?embed=1" },
+              () => {
+                const range = document.querySelector(".scrub-range");
+                if (range) {
+                  range.value = "5";
+                  range.dispatchEvent(new Event("input", { bubbles: true }));
+                }
+                const vns = Array.from(document.querySelectorAll(".vr .vn"));
+                return vns.map((el) => {
+                  const style = getComputedStyle(el);
+                  return {
+                    name: el.textContent,
+                    ellipsis: style.textOverflow === "ellipsis",
+                    overflow: el.scrollWidth > el.clientWidth + 1,
+                  };
+                });
+              },
+            );
+            const bad = rp1280?.filter((v) => v.ellipsis || v.overflow) ?? [];
+            ok(
+              "embed 1280x650: no .vn (variable name) element has text-overflow ellipsis or scrollWidth > clientWidth + 1 at 1280x650 embed on the regex-parse sample at step 5",
+              Boolean(rp1280) && rp1280.length > 0 && bad.length === 0,
+              bad.map((b) => `${b.name}: ellipsis=${b.ellipsis} overflow=${b.overflow}`).join(", "),
+            );
+          }
 
           const caps = await shots.scanCaptions(
             [
@@ -1078,7 +1178,7 @@ try {
   const labData = JSON.parse(/<script type="application\/json" id="mira-data">([\s\S]*?)<\/script>/.exec(readFileSync(labBuild.indexPath, "utf8"))[1]);
   ok("build defaults course = lab.subject and lesson = lab.module", labData.meta.course === "AMD AI Agents 101" && labData.meta.lesson === "M1", JSON.stringify([labData.meta.course, labData.meta.lesson]));
   const lp = bootPlayer(readFileSync(labBuild.indexPath, "utf8"), { embed: true });
-  lp.click(lp.all((x) => x.tagName === "BUTTON" && x.textContent.includes("Điểm dừng tiếp theo"))[0]);
+  lp.key("n");
   lp.byClass("gate-input")[0].value = "3";
   lp.byClass("gate-input")[0].dispatchEvent(new FakeEvent("keydown", { key: "Enter" }));
   const labEvent = lp.messages.find((x) => x.m.kind === "event")?.m.event;

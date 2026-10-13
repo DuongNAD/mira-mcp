@@ -28,7 +28,7 @@ export function createPlot(cfg: PlotCfg): VizInstance {
     return true;
   };
 
-  const update = (m: Model, k: number): void => {
+  const update = (m: Model, k: number, _animate?: boolean): void => {
     last = { m, k };
     svg.style.display = ""; // it must be laid out to be measured
     fit();
@@ -80,11 +80,16 @@ export function createPlot(cfg: PlotCfg): VizInstance {
     );
   };
 
+  let lastEmpty = true;
   return {
     el,
-    update,
+    update: (...args) => {
+      update(...args);
+      lastEmpty = note.style.display !== "none";
+    },
     resize: () => {
       if (fit() && last) update(last.m, last.k);
     },
+    isEmpty: () => lastEmpty,
   };
 }

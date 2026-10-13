@@ -52,7 +52,6 @@ class App {
   private readonly m: Model;
   private pos = 0;
   private playing = false;
-  private speed = 1;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private readonly states = new Map<number, StopState>();
   private resumeAfterGate = false;
@@ -69,6 +68,7 @@ class App {
   private readonly gate: Gate;
   private readonly controls: Controls;
   private readonly app: HTMLElement;
+  private readonly mainEl: HTMLElement;
   private readonly toast: HTMLElement;
   private readonly score: HTMLElement;
   private readonly themeBtn: HTMLButtonElement | undefined;
@@ -88,27 +88,20 @@ class App {
     this.m = new Model(data);
     this.embed = isEmbed(win);
     this.storage = safeStorage();
-    this.code = new CodePane(data);
+    this.caption = new Caption();
+    this.code = new CodePane(data, this.caption.el);
     this.vars = new VarsPane();
     this.stdout = new StdoutPane(data.stdout);
     this.counters = new Counters(data.counters);
-    this.caption = new Caption();
     this.gate = new Gate();
     this.toast = h("span", { class: "toast", role: "status", "aria-live": "polite" });
     this.score = h("span", { class: "score", title: "Số điểm dừng bạn đoán đúng" });
     this.score.style.display = "none";
     this.controls = new Controls(
       {
-        first: () => this.go(0, "jump"),
         prev: () => this.go(this.pos - 1, "step"),
         toggle: () => this.toggle(),
         next: () => this.go(this.pos + 1, "step"),
-        last: () => this.go(this.m.n - 1, "jump"),
-        nextStop: () => this.jumpToNextStop(),
-        setSpeed: (v) => {
-          this.speed = v;
-          this.render(false);
-        },
         seekInput: (v) => this.seekInput(v),
         seekChange: (v) => this.seekChange(v),
       },
@@ -132,23 +125,32 @@ class App {
       this.themeBtn.addEventListener("click", () => this.toggleTheme());
       actions.appendChild(this.themeBtn);
     }
-    const titles = h("div", { class: "titles" }, h("h1", { text: data.meta.title }));
-    if (data.meta.subtitle && !this.embed) titles.appendChild(h("p", { class: "sub mono", text: data.meta.subtitle }));
-    const header = h("header", { class: "top" }, titles, actions);
+    const header = h("header", { class: "top" });
+    if (!this.embed) {
+      const titles = h("div", { class: "titles" }, h("h1", { text: data.meta.title }));
+      if (data.meta.subtitle) titles.appendChild(h("p", { class: "sub mono", text: data.meta.subtitle }));
+      header.appendChild(titles);
+    }
+    if (data.counters.length > 0) {
+      header.appendChild(this.counters.el);
+    }
+    header.appendChild(actions);
+    if (this.embed && data.counters.length === 0) {
+      header.style.display = "none";
+    }
 
     // viz panel
     const vizPanel = this.buildVizPanel();
 
-    // right column: code, caption, vars, stdout
-    const below = h("div", { class: "below" }, this.vars.el, this.stdout.el);
-    const side = h("div", { class: "side" }, this.code.el, this.caption.el, below);
+    // right column: viz, vars, stdout
+    const side = h("div", { class: "side" }, vizPanel, this.vars.el, this.stdout.el);
 
-    const main = h("main", { class: "main" }, vizPanel, side);
+    const main = h("main", { class: "main" }, this.code.el, side, this.gate.el);
+    this.mainEl = main;
     this.app = h(
       "div",
       { class: `app${data.counters.length ? "" : " no-counters"}`, "data-embed": this.embed ? "1" : "0" },
       header,
-      data.counters.length ? this.counters.el : null,
       main,
       this.controls.el,
     );
@@ -189,7 +191,7 @@ class App {
       this.vizPanes.push(pane);
     });
     this.vizTabs[0]?.classList.add("on");
-    panel.append(head, body, this.gate.el);
+    panel.append(head, body);
     this.vizPanel = panel;
     this.markViz(0);
     if (typeof ResizeObserver !== "undefined") {
@@ -212,8 +214,10 @@ class App {
     const pane = h("div", { class: "info-pane" });
     pane.appendChild(h("div", { class: "info-call mono", text: d.meta.call ?? (d.meta.script ? `chạy ${d.meta.file}` : d.meta.file) }));
     this.traceTable = new TraceTable(this.m);
-    pane.appendChild(this.traceTable.el);
-    pane.appendChild(h("p", { class: "info-hint", text: "Nhấn → hoặc Space để chạy từng dòng. Điền dự đoán ở các điểm dừng để nhớ lâu hơn." }));
+    if (this.traceTable.cols.length > 0) {
+      pane.appendChild(this.traceTable.el);
+    }
+    pane.appendChild(h("p", { class: "info-hint", text: "Nhấn → hoặc Space để chạy từng dòng." }));
     return pane;
   }
 
@@ -226,6 +230,9 @@ class App {
     this.markViz(i);
     this.vizInstances[i]?.resize();
     this.vizInstances[i]?.update(this.m, this.pos, false);
+    const curViz = this.vizInstances[i];
+    const isEmpty = curViz?.isEmpty ? curViz.isEmpty() : false;
+    this.vizPanel?.classList.toggle("is-empty", isEmpty);
   }
 
   /* ───────── theme ───────── */
@@ -286,7 +293,12 @@ class App {
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.pause();
     });
+    this.win.addEventListener("resize", () => {
+      this.code.revealActive(false, this.gate.isOpen ? this.gate.el : undefined);
+      this.vizInstances[this.activeViz]?.resize();
+    });
     this.applyHash();
+    requestAnimationFrame(() => this.code.revealActive(false, this.gate.isOpen ? this.gate.el : undefined));
   }
 
   private bindKeys(): void {
@@ -353,6 +365,7 @@ class App {
     this.pos = stop.pos;
     this.render(false);
     this.openGate(stop);
+    requestAnimationFrame(() => this.code.revealActive(false, this.gate.el));
   }
 
   /* ───────── navigation ───────── */
@@ -447,7 +460,7 @@ class App {
 
   private schedule(): void {
     if (this.timer !== undefined) clearTimeout(this.timer);
-    const ms = Math.max(40, this.data.meta.autoplayMs / this.speed);
+    const ms = Math.max(40, this.data.meta.autoplayMs);
     this.timer = setTimeout(() => {
       this.timer = undefined;
       if (!this.playing) return;
@@ -470,6 +483,7 @@ class App {
       if (this.timer !== undefined) clearTimeout(this.timer);
       this.timer = undefined;
     }
+    this.mainEl.classList.add("gate-open");
     this.gate.show(stop, this.data.stops.length, {
       check: (input) => this.checkStop(stop, input),
       skip: () => {
@@ -479,13 +493,16 @@ class App {
       done: () => this.closeGate(true),
     });
     this.render(false);
+    requestAnimationFrame(() => this.code.revealActive(false, this.gate.el));
   }
 
   private closeGate(resume: boolean): void {
+    this.mainEl.classList.remove("gate-open");
     this.gate.hide();
     const again = resume && this.resumeAfterGate;
     this.resumeAfterGate = false;
     this.render(false);
+    requestAnimationFrame(() => this.code.revealActive(false));
     if (this.pos === this.m.n - 1) this.maybeComplete();
     else if (again) this.play();
   }
@@ -656,7 +673,7 @@ class App {
   }
 
   private renderControls(): void {
-    this.controls.update(this.pos, this.playing, this.speed, this.tickStates(), this.m.nextStopAfter(this.pos) >= 0);
+    this.controls.update(this.pos, this.playing, this.tickStates());
   }
 
   private render(animate: boolean): void {
@@ -666,7 +683,7 @@ class App {
     const reduced = isReducedMotion();
     const anim = animate && !reduced;
     const st = m.frameState(pos);
-    this.code.update(m.executedLine(pos), m.nextLine(pos), m.stackAt(pos), anim);
+    this.code.update(m.executedLine(pos), m.nextLine(pos), m.stackAt(pos), anim, this.gate.isOpen ? this.gate.el : undefined);
     const fn = m.funcName(pos);
     let banner: Banner | undefined;
     if (step.e === "r") {
@@ -682,6 +699,9 @@ class App {
     this.stdout.update(step.o);
     this.counters.update(m, pos, anim);
     this.vizInstances[this.activeViz]?.update(m, pos, anim);
+    const curViz = this.vizInstances[this.activeViz];
+    const isEmpty = curViz?.isEmpty ? curViz.isEmpty() : false;
+    this.vizPanel?.classList.toggle("is-empty", isEmpty);
     this.traceTable?.update(pos);
     const cap = this.describe();
     this.caption.set(cap.main, cap.sub);

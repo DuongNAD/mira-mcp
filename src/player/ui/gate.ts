@@ -84,10 +84,16 @@ export class Gate {
     const skip = h("button", { class: "btn-ghost", type: "button", text: "Bỏ qua", title: "Bỏ qua câu hỏi này (tính là chưa đúng)" });
     skip.addEventListener("click", () => this.onSkip());
 
+    this.el.classList.remove("has-result");
     if (stop.kind === "choice") {
       const list = h("div", { class: "gate-choices", role: "group" });
       (stop.choice ?? []).forEach((label, i) => {
-        const b = h("button", { class: "choice", type: "button" }, h("span", { class: "choice-key", text: String.fromCharCode(65 + i) }), h("span", { class: "choice-text", text: label }));
+        const b = h(
+          "button",
+          { class: "choice", type: "button" },
+          h("span", { class: "choice-key mono", text: String.fromCharCode(65 + i) }),
+          h("span", { class: "choice-text", text: label }),
+        );
         b.addEventListener("click", () => this.onCheck(String(i)));
         list.appendChild(b);
       });
@@ -119,13 +125,13 @@ export class Gate {
     void this.el.offsetWidth;
     this.el.classList.add("in");
     bringIntoView(this.el);
-    // the scroll above already framed the gate; focusing must not scroll again (it ignores the sticky bar)
     queueMicrotask(() => this.input?.focus({ preventScroll: true }));
   }
 
   hide(): void {
     this.current = undefined;
     this.handlers = undefined;
+    this.el.classList.remove("has-result");
     this.el.style.display = "none";
     this.body.textContent = "";
     this.result.textContent = "";
@@ -139,6 +145,7 @@ export class Gate {
     }
     this.busy = true;
     const reveal = this.handlers.check(input);
+    this.el.classList.add("has-result");
     this.body.style.display = "none";
     this.result.style.display = "";
     this.result.textContent = "";
@@ -147,7 +154,7 @@ export class Gate {
       h(
         "div",
         { class: `gate-verdict ${right ? "right" : "diff"}`, role: "status" },
-        icon(right ? "check" : "x", 18),
+        icon(right ? "check" : "x", 20),
         h("span", { text: right ? "Đúng" : "Khác dự đoán" }),
       ),
     );
@@ -163,7 +170,7 @@ export class Gate {
     const next = h("button", { class: "btn-primary", type: "button", text: "Tiếp tục" });
     next.addEventListener("click", () => this.onDone());
     this.result.appendChild(h("div", { class: "gate-row" }, next));
-    bringIntoView(this.el); // the revealed answer makes the gate taller
+    bringIntoView(this.el);
     queueMicrotask(() => next.focus({ preventScroll: true }));
   }
 

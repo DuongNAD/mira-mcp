@@ -102,7 +102,7 @@ mira_build  { spec }
 
 ### Player
 
-Tối dịu mặc định (có nút đổi sáng/tối), hai cột từ 1100 px trở lên, xếp chồng bên dưới, không cuộn ngang ở 390 px. Cửa sổ mã có hai dấu: dòng vừa chạy (thanh màu nhấn) và dòng sắp chạy (viền); bảng biến nháy nhẹ khi giá trị đổi; đầu ra; chú thích; thanh tua có vạch điểm dừng; chọn tốc độ.
+Tối dịu mặc định (có nút đổi sáng/tối), hai cột (mã nguồn 1.45fr, ngăn trạng thái 1fr), viền mảnh hairline, phong cách Apple-keynote tinh gọn. Ngăn mã tự xuống dòng (không tràn ngang), thanh nhấn dòng đang chạy và chú thích ở chân ngăn; bảng biến nháy nhẹ khi giá trị đổi; đầu ra stdout; thanh tua với các chấm điểm dừng; thanh điều khiển tối giản.
 
 Khi không cấu hình viz (thường gặp ở bài luyện số học), khung bên trái hiện **bảng dò vết** kiểu đề thi; các dòng chỉ xuất hiện khi lần chạy tới đó (không bao giờ lộ kết quả trước).
 

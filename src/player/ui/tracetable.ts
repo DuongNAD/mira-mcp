@@ -14,10 +14,8 @@ interface Row {
 
 const SHOW = 14;
 
-function scalar(v: Val | undefined): boolean {
-  if (v === null) return true;
-  if (typeof v === "boolean" || typeof v === "number") return true;
-  if (typeof v === "string") return v.length <= 24;
+function isNumeric(v: Val | undefined): boolean {
+  if (typeof v === "number") return true;
   if (isPlainObject(v)) return isNumVal(v);
   return false;
 }
@@ -28,7 +26,7 @@ function scalar(v: Val | undefined): boolean {
  */
 export class TraceTable {
   readonly el: HTMLElement;
-  private readonly cols: string[] = [];
+  readonly cols: string[] = [];
   private readonly rows: Row[] = [];
   private readonly body: HTMLElement;
   private readonly head: HTMLElement;
@@ -45,7 +43,7 @@ export class TraceTable {
       for (const name of Object.keys(st.vars)) {
         if (name.startsWith("@")) continue;
         const v = st.vars[name] as Val;
-        if (!scalar(v)) continue;
+        if (!isNumeric(v)) continue;
         let e = info.get(name);
         if (!e) {
           e = { order: info.size, seen: new Set() };
@@ -82,6 +80,7 @@ export class TraceTable {
 
   /** Rows up to and including step k, the last SHOW of them. */
   update(k: number): void {
+    if (this.cols.length === 0) return;
     let n = 0;
     let lo = 0;
     let hi = this.rows.length;

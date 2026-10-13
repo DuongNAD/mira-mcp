@@ -102,7 +102,7 @@ mira_build  { spec }
 
 ### The player
 
-Dark by default (light theme toggle), two columns at 1100 px and above, stacked below, no horizontal scroll at 390 px. Code window with two markers (the line that just ran: accent bar; the line about to run: outline), variables with soft flashes for changed values, stdout, narration caption, scrubber with stop ticks, speed control.
+Dark by default (light theme toggle), two columns (code 1.45fr, state panels 1fr), hairline borders, calm Apple-keynote aesthetic. Code panel with line wrapping (no overflow), active line accent marker and footer narration; variables with soft flashes for changed values; stdout; scrubber with stop ticks; clean controls.
 
 With no viz configured (typical for numeric drills) the left panel shows an exam-style **trace table** whose rows appear only as the run reaches them (it never shows the result ahead of time).
 
